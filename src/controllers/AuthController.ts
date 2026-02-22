@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
-import jwt from 'jsonwebtoken';
 import User from "../models/User";
 import { checkPassword, hashPassword } from "../utils/auth";
 import { generateToken } from "../utils/token";
 import { AuthEmail } from "../emails/AuthEmail";
 import { generateJWT } from "../utils/jwt";
+import { Op } from 'sequelize';
 
 export class AuthController {
     static createAccount  = async (req: Request, res: Response) => {
@@ -19,11 +19,17 @@ export class AuthController {
                 return res.status(409).json({error: error.message})
             }
 
-            const user = new User(req.body)
+            const user = await User.create(req.body)
 
             user.password = await hashPassword(password);
-            user.token = generateToken();
+            const token = generateToken();
 
+            // Variable global de NODE, solo lo generaremos en un entorno de desarrollo o test
+            if (process.env.NODE_ENV !== 'production') {
+                globalThis.cashTrackrConfirmationToken = token;// Creamos la variable global y asignamos el valor
+            }
+            
+            user.token = token;
             await user.save();
 
             await AuthEmail.sendConfirmationEmail({
@@ -32,7 +38,7 @@ export class AuthController {
                 token: user.token
             });
 
-            res.json('Cuenta creada correctamente.')
+            res.status(201).json('Cuenta creada correctamente.')
         } catch (error) {
             // console.log(error)
             res.status(500).json({error: 'Hubo un error'})
@@ -46,7 +52,7 @@ export class AuthController {
             const user = await User.findOne({where: {token}})
 
             if (!user) {
-                const error = new Error('Token no valido');
+                const error = new Error('Token no válido');
                 return res.status(401).json({error: error.message})
             }
 
@@ -138,7 +144,7 @@ export class AuthController {
                 return res.status(401).json({error: error.message})
             }
 
-            res.json("Token valido")
+            res.json("Token válido, asigna un nuevo password.")
             
         } catch (error) {
             // console.log(error)
@@ -220,6 +226,41 @@ export class AuthController {
             }
 
             res.json("Contraseña actual correcto.")
+        } catch (error) {
+            // console.log(error)
+            res.status(500).json({error: 'Hubo un error'})
+        }
+    }
+
+    static updateUser = async (req: Request, res: Response) => {
+
+        try {
+            const { name, email } = req.body;
+
+            const { id } = req.user;
+
+            // Verificar el email
+            const emailExists = await User.findOne({ 
+                                                    where: 
+                                                        { 
+                                                            email: email,
+                                                            id: { 
+                                                                    [Op.ne]: id 
+                                                                }
+                                                        }
+                                                    });
+
+            if (emailExists) {
+                const error = new Error('Este email ya esta registrado.')
+                return res.status(409).json({error: error.message})
+            }
+
+            req.user.name = name;
+            req.user.email = email;
+
+            await req.user.save();
+
+            res.json("Perfil actualizado correctamente.")
         } catch (error) {
             // console.log(error)
             res.status(500).json({error: 'Hubo un error'})

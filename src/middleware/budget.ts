@@ -12,9 +12,11 @@ declare global {
 
 export const validateBudgetId = async (req: Request, res: Response, next: NextFunction) => {
     
+    // .bail() te da el primer mensaje de error
     await param('budgetId')
-        .isInt().withMessage('ID no válido')
-        .custom((value) => value > 0 ).withMessage("ID no válido").run(req);
+        .isInt().withMessage('ID no válido').bail()
+        .custom((value) => value > 0 ).withMessage("ID no válido").bail()
+        .run(req);
 
     let errors = validationResult(req)
     if (!errors.isEmpty()) {
@@ -57,7 +59,7 @@ export const validateBudgetInput = async (req: Request, res: Response, next: Nex
 
 export function hasAccess(req: Request, res: Response, next: NextFunction) {
 
-    if (req.budget.id !== req.user.id) {
+    if (req.budget.userId !== req.user.id) {
         const error = new Error("Acción no válida.")
         return res.status(401).json({error: error.message})
     }

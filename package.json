@@ -8,7 +8,9 @@
     "dev:api": "nodemon src/index.ts --api",
     "build": "tsc",
     "start": "node ./dist/index.js",
-    "test": "jest"
+    "test": "jest",
+    "test:coverage": "npm run pretest && jest --coverage",
+    "pretest": "ts-node ./src/data --clear"
   },
   "keywords": [
     "Kevin",
@@ -38,9 +40,11 @@
     "@types/mocha": "^10.0.10",
     "@types/morgan": "^1.9.10",
     "@types/nodemailer": "^7.0.5",
+    "@types/supertest": "^6.0.3",
     "jest": "^30.2.0",
     "node-mocks-http": "^1.17.2",
     "nodemon": "^3.1.11",
+    "supertest": "^7.2.2",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
